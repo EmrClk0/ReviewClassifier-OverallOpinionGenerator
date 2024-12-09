@@ -212,5 +212,8 @@ uvicorn main:app
 
 Sunucuyu başarıyla başlattıktan sonra, `webApp/index.html` dosyasını tarayıcınızda açarak web uygulamanızı görüntüleyebilirsiniz. 
 
+## ⚠️ DİKKAT
+
+**bertHypertuning.ipynb** dosyası **`num_train_epochs = 1`** şeklinde çalıştırıp eğitiniz. Eğitilmiş BERT model dosyası, veri boyutunun büyük olması nedeniyle depoya yüklenememiştir. Bu durumu çözmek için modelin eğitimi tamamlandıktan sonra, trainer.save_model() kod parçası çalıştırılmalıdır. Bu işlem, eğitilen modelin yerel olarak kaydedilmesini sağlar ve projeye entegre edebilmek için gerekli bir adımdır.
 
   
