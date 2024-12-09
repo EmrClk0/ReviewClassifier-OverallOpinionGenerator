@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ürün Detayları</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        .review, .conclusion {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .rating {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .loading {
+            font-style: italic;
+            color: gray;
+        }
+
+        #user-review {
+            font-size: 18px;  
+            line-height: 1.6; 
+            padding: 10px;  
+        }
+    </style>
+</head>
+<body>
+    
+    <h1>Ürün Detayları</h1>
+    <p><strong>Ürün ID:</strong> <span id="product-id"></span></p>
+    <p><strong>Yorum Sayısı:</strong> <span id="product-count"></span></p>
+    <p><strong>Ortalama Puan:</strong> <span id="product-mean"></span></p>
+
+    <h2>Örnek Yorumlar</h2>
+    <div id="reviews">
+        <p>Yorumlar yükleniyor...</p>
+    </div>
+
+    <h2>LLM Sonucu</h2>
+    <div id="conclusion">
+        <p class="loading">LLM analizi gerçekleştiriliyor, lütfen bekleyiniz...</p>
+    </div>
+
+    <h2>Yorum Yaz</h2>
+    <div class="write-review">
+        <textarea id="user-review" rows="4" cols="100" placeholder="Yorumunuzu buraya yazın..."></textarea>
+        <br><br>
+        <button id="classify-button">Sınıflandır</button>
+        <p id="classification-result"></p>
+    </div>
+
+    <script>
+        // URL'den parametreleri al
+        const urlParams = new URLSearchParams(window.location.search);
+        const clothingID = urlParams.get('clothingID');
+        const count = urlParams.get('count');
+        const mean = urlParams.get('mean');
+
+        // Ürün bilgilerini ekrana yaz
+        document.getElementById('product-id').textContent = clothingID;
+        document.getElementById('product-count').textContent = count;
+        document.getElementById('product-mean').textContent = mean;
+
+        // Yorumları getirmek için API çağrısı yap
+        async function fetchExampleReviews(dressID) {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/exampleReviews?dressID=${dressID}`);
+                if (!response.ok) {
+                    throw new Error('Yorumlar alınamadı: ' + response.statusText);
+                }
+                const reviews = await response.json();
+
+                
+                const reviewsContainer = document.getElementById('reviews');
+                reviewsContainer.innerHTML = ''; 
+
+                reviews.forEach(review => {
+                    const reviewDiv = document.createElement('div');
+                    reviewDiv.className = 'review';
+
+                    reviewDiv.innerHTML = `
+                        <p><strong>Yorum:</strong> ${review.review}</p>
+                        <p><strong>Puan:</strong> <span class="rating">${review.rating}/5</span></p>
+                    `;
+
+                    reviewsContainer.appendChild(reviewDiv);
+                });
+
+                // Yorumları aldıktan sonra LLM sonucu oluştur
+                fetchLLMConclusion(dressID);
+            } catch (error) {
+                console.error('Bir hata oluştu:', error);
+                document.getElementById('reviews').textContent = 'Yorumlar yüklenemedi.';
+            }
+        }
+
+        // LLM sonucu oluşturmak için API çağrısı
+        async function fetchLLMConclusion(dressID) {
+            
+
+            const llmModelType = "gpt"; // "gpt" veya "llama" olarak değiştirilebilir
+            const endpoint = `http://127.0.0.1:8000/${llmModelType}/conclusionGenerate?dressID=${dressID}`;
+
+            try {
+                const response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error('LLM sonucu alınamadı: ' + response.statusText);
+                }
+
+                const result = await response.json();
+
+                // LLM sonucunu ekrana yaz
+                const conclusionContainer = document.getElementById('conclusion');
+                conclusionContainer.innerHTML = `
+                    <div class="conclusion">
+                        <p><strong>Sonuç:</strong> ${result.LLMresponse}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Bir hata oluştu:', error);
+                document.getElementById('conclusion').innerHTML = `
+                    <p>LLM sonucu alınamadı.</p>
+                `;
+            }
+        }
+
+
+        // yorum sınıflandırıcı
+        async function classifyReview() {
+            const reviewText = document.getElementById('user-review').value;
+            if (!reviewText.trim()) {
+                alert('Lütfen bir yorum yazın.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/classifyReview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ reviewText: reviewText })  
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error('Sınıflandırma işlemi başarısız oldu: ' + errorData.detail);
+                }
+
+                const result = await response.json();
+                const rating = result.class;
+
+                // Sonucu ekrana yaz ve yıldızlarla göster
+                const classificationResult = document.getElementById('classification-result');
+                classificationResult.innerHTML = `
+                    <p><strong>Sınıflandırma Sonucu:</strong> ${rating}/5</p>
+                    <p><strong>Yıldız:</strong> <span class="stars">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</span></p>
+                `;
+            } catch (error) {
+                console.error('Bir hata oluştu:', error);
+                document.getElementById('classification-result').textContent = 'Sınıflandırma işlemi başarısız oldu.';
+            }
+        }
+        document.getElementById('classify-button').addEventListener('click', classifyReview);
+
+
+        
+        fetchExampleReviews(clothingID);
+    </script>
+</body>
+</html>

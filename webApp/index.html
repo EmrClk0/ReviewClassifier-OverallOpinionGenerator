@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ürün Bilgileri</title>
+    <style>
+        table {
+            width: 50%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer; 
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ürün Bilgileri</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Ürün ID</th>
+                <th>Yorum Sayısı</th>
+                <th>Ortalama Puan</th>
+            </tr>
+        </thead>
+        <tbody id="product-table-body">
+           
+        </tbody>
+    </table>
+
+    <script>
+        
+        async function fetchDressInformations() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/dressInformations');
+                if (!response.ok) {
+                    throw new Error('Veri alınamadı: ' + response.statusText);
+                }
+                const data = await response.json();
+
+                
+                const tableBody = document.getElementById('product-table-body');
+                tableBody.innerHTML = ''; // Eski içerikleri temizle
+                
+                //gelen veriyle tabloyu doldur
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+
+                    // detail sayfasına yönlenebilmesi için event listener
+                    row.addEventListener('click', () => {
+                        const params = new URLSearchParams({
+                            clothingID: item.clothingID,
+                            count: item.count,
+                            mean: item.mean.toFixed(1)
+                        }).toString();
+
+                        window.location.href = `product_detail.html?${params}`;
+                    });
+
+                    row.innerHTML = `
+                        <td>${item.clothingID}</td>
+                        <td>${item.count}</td>
+                        <td>${item.mean.toFixed(1)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Bir hata oluştu:', error);
+            }
+        }
+
+        
+        window.onload = fetchDressInformations;
+    </script>
+</body>
+</html>
